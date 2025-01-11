@@ -17,6 +17,7 @@ use rustls::pki_types::{CertificateDer, PrivateKeyDer};
 use rustls::{self, ServerConfig};
 
 use crate::error::{ProtoError, ProtoResult};
+use crate::CertificateAndKey;
 
 /// Read the certificate from the specified path.
 ///
@@ -77,14 +78,13 @@ pub fn read_key_from_der(path: &Path) -> ProtoResult<PrivateKeyDer<'static>> {
 
 /// Construct the new Acceptor with the associated pkcs12 data
 pub fn new_acceptor(
-    cert: Vec<CertificateDer<'static>>,
-    key: PrivateKeyDer<'static>,
+    certificate_and_key: impl CertificateAndKey,
 ) -> Result<ServerConfig, rustls::Error> {
-    let mut config =
+    let builder =
         ServerConfig::builder_with_provider(Arc::new(rustls::crypto::ring::default_provider()))
             .with_safe_default_protocol_versions()?
-            .with_no_client_auth()
-            .with_single_cert(cert, key)?;
+            .with_no_client_auth();
+    let mut config = certificate_and_key.apply_to(builder)?;
 
     config.alpn_protocols = vec![b"h2".to_vec()];
     Ok(config)

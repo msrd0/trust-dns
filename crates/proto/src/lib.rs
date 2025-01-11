@@ -77,3 +77,45 @@ pub use crate::xfer::BufDnsStreamHandle;
 #[cfg(feature = "backtrace")]
 pub use error::{ExtBacktrace, ENABLE_BACKTRACE};
 pub use error::{ForwardData, ForwardNSData, ProtoError, ProtoErrorKind};
+
+#[cfg(feature = "dns-over-rustls")]
+mod private {
+    use rustls::{
+        pki_types::{CertificateDer, PrivateKeyDer},
+        server::{ResolvesServerCert, WantsServerCert},
+        ConfigBuilder, ServerConfig,
+    };
+    use std::sync::Arc;
+
+    pub trait CertificateAndKey {
+        fn apply_to(
+            self,
+            builder: ConfigBuilder<ServerConfig, WantsServerCert>,
+        ) -> Result<ServerConfig, rustls::Error>;
+    }
+
+    impl CertificateAndKey for (Vec<CertificateDer<'static>>, PrivateKeyDer<'static>) {
+        fn apply_to(
+            self,
+            builder: ConfigBuilder<ServerConfig, WantsServerCert>,
+        ) -> Result<ServerConfig, rustls::Error> {
+            let (cert, key) = self;
+            builder.with_single_cert(cert, key)
+        }
+    }
+
+    impl CertificateAndKey for Arc<dyn ResolvesServerCert> {
+        fn apply_to(
+            self,
+            builder: ConfigBuilder<ServerConfig, WantsServerCert>,
+        ) -> Result<ServerConfig, rustls::Error> {
+            Ok(builder.with_cert_resolver(self))
+        }
+    }
+}
+
+#[cfg(feature = "dns-over-rustls")]
+pub trait CertificateAndKey: private::CertificateAndKey {}
+
+#[cfg(feature = "dns-over-rustls")]
+impl<T: private::CertificateAndKey> CertificateAndKey for T {}

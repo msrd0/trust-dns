@@ -408,12 +408,11 @@ impl<T: RequestHandler> ServerFuture<T> {
         &mut self,
         listener: net::TcpListener,
         timeout: Duration,
-        certificate_and_key: (Vec<CertificateDer<'static>>, PrivateKeyDer<'static>),
+        certificate_and_key: impl hickory_proto::CertificateAndKey,
     ) -> io::Result<()> {
         use crate::proto::rustls::tls_server;
 
-        let tls_acceptor = tls_server::new_acceptor(certificate_and_key.0, certificate_and_key.1)
-            .map_err(|e| {
+        let tls_acceptor = tls_server::new_acceptor(certificate_and_key).map_err(|e| {
             io::Error::new(
                 io::ErrorKind::Other,
                 format!("error creating TLS acceptor: {e}"),
@@ -442,7 +441,7 @@ impl<T: RequestHandler> ServerFuture<T> {
         listener: net::TcpListener,
         // TODO: need to set a timeout between requests.
         handshake_timeout: Duration,
-        certificate_and_key: (Vec<CertificateDer<'static>>, PrivateKeyDer<'static>),
+        certificate_and_key: impl hickory_proto::CertificateAndKey,
         dns_hostname: Option<String>,
         http_endpoint: String,
     ) -> io::Result<()> {
@@ -458,8 +457,7 @@ impl<T: RequestHandler> ServerFuture<T> {
         let access = self.access.clone();
         debug!("registered https: {listener:?}");
 
-        let tls_acceptor = tls_server::new_acceptor(certificate_and_key.0, certificate_and_key.1)
-            .map_err(|e| {
+        let tls_acceptor = tls_server::new_acceptor(certificate_and_key).map_err(|e| {
             io::Error::new(
                 io::ErrorKind::Other,
                 format!("error creating TLS acceptor: {e}"),
