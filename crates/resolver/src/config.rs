@@ -372,9 +372,6 @@ impl<'de> serde::Deserialize<'de> for ConnectionConfig {
     serde(deny_unknown_fields, rename_all = "snake_case", tag = "type")
 )]
 pub enum ProtocolConfig {
-    #[default]
-    Udp,
-    Tcp,
     #[cfg(feature = "__tls")]
     Tls {
         /// The server name to use in the TLS handshake.
@@ -402,6 +399,11 @@ pub enum ProtocolConfig {
         #[cfg_attr(feature = "serde", serde(default))]
         disable_grease: bool,
     },
+    #[default]
+    #[cfg_attr(feature = "serde", serde(untagged))]
+    Udp,
+    #[cfg_attr(feature = "serde", serde(untagged))]
+    Tcp,
 }
 
 impl ProtocolConfig {
